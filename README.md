@@ -27,7 +27,7 @@ Thanks for your interest!
 
 ```
 external_components:
-  # pull geiger from Github @descipher branch in GitHub
+  # pull from Github @gelidusresearch current branch 
   - source: github://GelidusResearch/grps@current
     components: [ ld2420 ]
     refresh: 0s
