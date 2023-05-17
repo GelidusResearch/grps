@@ -77,8 +77,8 @@ uart:
 # The LD2420 has 16 sense gates 0-15, 0.75m of resolution, max distance is spec'd at 8m
 ld2420:
   presence_time_window: 120s
-  detection_gate_minimum : 1
-  detection_gate_maximum: 15
+  detection_gate_min : 1
+  detection_gate_max: 12
   g0_move_threshold: 60000
   g0_still_threshold: 40000
   g1_move_threshold: 40000
