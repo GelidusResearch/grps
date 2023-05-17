@@ -14,7 +14,6 @@
 namespace esphome {
 namespace ld2420 {
 
-
 // Local const's
 static const uint16_t REFRESH_RATE_MS = 1000;
 
@@ -47,24 +46,16 @@ static const uint8_t LD2420_ERROR_NONE = 0x00;
 static const uint8_t LD2420_ERROR_UNKNOWN = 0x01;
 static const uint8_t LD2420_ERROR_TIMEOUT = 0x02;
 
-static const char* err_message[] = {
-  "None",
-  "Unknown",
-  "Timeout"
-};
+static const char *err_message[] = {"None", "Unknown", "Timeout"};
 
 // Register address values
-static const uint16_t CMD_MIN_GATE_REG =  0x0000;
-static const uint16_t CMD_MAX_GATE_REG =  0x0001;
-static const uint16_t CMD_TIMEOUT_REG =   0x0004;
-static const uint16_t CMD_GATE_HIGH_THRESH[16] = {0x0010, 0x0011, 0x0012, 0x0013,
-                                                  0x0014, 0x0015, 0x0016, 0x0017,
-                                                  0x0018, 0x0019, 0x001A, 0x001B,
-                                                  0x001C, 0x001D, 0x001E, 0x001F};
-static const uint16_t CMD_GATE_LOW_THRESH[16] =  {0x0020, 0x0021, 0x0022, 0x0023,
-                                                  0x0024, 0x0025, 0x0026, 0x0027,
-                                                  0x0028, 0x0029, 0x002A, 0x002B,
-                                                  0x002C, 0x002D, 0x002E, 0x002F};
+static const uint16_t CMD_MIN_GATE_REG = 0x0000;
+static const uint16_t CMD_MAX_GATE_REG = 0x0001;
+static const uint16_t CMD_TIMEOUT_REG = 0x0004;
+static const uint16_t CMD_GATE_HIGH_THRESH[16] = {0x0010, 0x0011, 0x0012, 0x0013, 0x0014, 0x0015, 0x0016, 0x0017,
+                                                  0x0018, 0x0019, 0x001A, 0x001B, 0x001C, 0x001D, 0x001E, 0x001F};
+static const uint16_t CMD_GATE_LOW_THRESH[16] = {0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025, 0x0026, 0x0027,
+                                                 0x0028, 0x0029, 0x002A, 0x002B, 0x002C, 0x002D, 0x002E, 0x002F};
 
 // COMMAND_BYTE Header & Footer
 static const uint32_t CMD_FRAME_HEADER = 0xFAFBFCFD;
@@ -75,12 +66,11 @@ static const uint8_t CMD_FRAME_STATUS = 7;
 static const uint8_t CMD_ERROR_WORD = 8;
 
 class LD2420Component : public Component, public uart::UARTDevice {
-
 #ifdef USE_SENSOR
   SUB_SENSOR(moving_target_distance)
 #endif
 
-public:
+ public:
   void setup() override;
   void dump_config() override;
   void loop() override;
@@ -103,7 +93,6 @@ public:
     bool ack;
   };
 
-
 #ifdef USE_BINARY_SENSOR
   void set_presence_sensor(binary_sensor::BinarySensor *sens) { this->presence_binary_sensor_ = sens; };
 #endif
@@ -111,53 +100,52 @@ public:
   int send_cmd_from_array(cmd_frame_t cmd_frame);
   void handle_cmd_error(uint8_t error);
   void set_timeout(uint16_t value) { this->new_config_.timeout = value; };
-  void set_max_gate(uint8_t value) { this->new_config_.max_gate = value; };
-  void set_min_gate(uint8_t value) { this->new_config_.min_gate = value; };
-  void set_range_config(uint32_t rg0_move, uint32_t rg0_still, uint32_t rg1_move, uint32_t rg1_still,
-                        uint32_t rg2_move, uint32_t rg2_still, uint32_t rg3_move, uint32_t rg3_still,
-                        uint32_t rg4_move, uint32_t rg4_still, uint32_t rg5_move, uint32_t rg5_still,
-                        uint32_t rg6_move, uint32_t rg6_still, uint32_t rg7_move, uint32_t rg7_still,
-                        uint32_t rg8_move, uint32_t rg8_still, uint32_t rg9_move, uint32_t rg9_still,
-                        uint32_t rg10_move, uint32_t rg10_still, uint32_t rg11_move, uint32_t rg11_still,
-                        uint32_t rg12_move, uint32_t rg12_still, uint32_t rg13_move, uint32_t rg13_still,
-                        uint32_t rg14_move, uint32_t rg14_still, uint32_t rg15_move, uint32_t rg15_still) {
-    this->new_config_.high_thresh[(uint8_t)0] = rg0_move;
-    this->new_config_.low_thresh[(uint8_t)0] = rg0_still;
-    this->new_config_.high_thresh[(uint8_t)1] = rg1_move;
-    this->new_config_.low_thresh[(uint8_t)1] = rg1_still;
-    this->new_config_.high_thresh[(uint8_t)2] = rg2_move;
-    this->new_config_.low_thresh[(uint8_t)2] = rg2_still;
-    this->new_config_.high_thresh[(uint8_t)3] = rg3_move;
-    this->new_config_.low_thresh[(uint8_t)3] = rg3_still;
-    this->new_config_.high_thresh[(uint8_t)4] = rg4_move;
-    this->new_config_.low_thresh[(uint8_t)4] = rg4_still;
-    this->new_config_.high_thresh[(uint8_t)5] = rg5_move;
-    this->new_config_.low_thresh[(uint8_t)5] = rg5_still;
-    this->new_config_.high_thresh[(uint8_t)6] = rg6_move;
-    this->new_config_.low_thresh[(uint8_t)6] = rg6_still;
-    this->new_config_.high_thresh[(uint8_t)7] = rg7_move;
-    this->new_config_.low_thresh[(uint8_t)7] = rg7_still;
-    this->new_config_.high_thresh[(uint8_t)8] = rg8_move;
-    this->new_config_.low_thresh[(uint8_t)8] = rg8_still;
-    this->new_config_.high_thresh[(uint8_t)9] = rg9_move;
-    this->new_config_.low_thresh[(uint8_t)9] = rg9_still;
-    this->new_config_.high_thresh[(uint8_t)10] = rg10_move;
-    this->new_config_.low_thresh[(uint8_t)10] = rg10_still;
-    this->new_config_.high_thresh[(uint8_t)11] = rg11_move;
-    this->new_config_.low_thresh[(uint8_t)11] = rg11_still;
-    this->new_config_.high_thresh[(uint8_t)12] = rg12_move;
-    this->new_config_.low_thresh[(uint8_t)12] = rg12_still;
-    this->new_config_.high_thresh[(uint8_t)13] = rg13_move;
-    this->new_config_.low_thresh[(uint8_t)13] = rg13_still;
-    this->new_config_.high_thresh[(uint8_t)14] = rg14_move;
-    this->new_config_.low_thresh[(uint8_t)14] = rg14_still;
-    this->new_config_.high_thresh[(uint8_t)15] = rg15_move;
-    this->new_config_.low_thresh[(uint8_t)15] = rg15_still;
+  void set_max_gate(uint16_t value) { this->new_config_.max_gate = value; };
+  void set_min_gate(uint16_t value) { this->new_config_.min_gate = value; };
+  void set_range_config(uint32_t rg0_move, uint32_t rg0_still, uint32_t rg1_move, uint32_t rg1_still, uint32_t rg2_move,
+                        uint32_t rg2_still, uint32_t rg3_move, uint32_t rg3_still, uint32_t rg4_move,
+                        uint32_t rg4_still, uint32_t rg5_move, uint32_t rg5_still, uint32_t rg6_move,
+                        uint32_t rg6_still, uint32_t rg7_move, uint32_t rg7_still, uint32_t rg8_move,
+                        uint32_t rg8_still, uint32_t rg9_move, uint32_t rg9_still, uint32_t rg10_move,
+                        uint32_t rg10_still, uint32_t rg11_move, uint32_t rg11_still, uint32_t rg12_move,
+                        uint32_t rg12_still, uint32_t rg13_move, uint32_t rg13_still, uint32_t rg14_move,
+                        uint32_t rg14_still, uint32_t rg15_move, uint32_t rg15_still) {
+    this->new_config_.high_thresh[(uint8_t) 0] = rg0_move;
+    this->new_config_.low_thresh[(uint8_t) 0] = rg0_still;
+    this->new_config_.high_thresh[(uint8_t) 1] = rg1_move;
+    this->new_config_.low_thresh[(uint8_t) 1] = rg1_still;
+    this->new_config_.high_thresh[(uint8_t) 2] = rg2_move;
+    this->new_config_.low_thresh[(uint8_t) 2] = rg2_still;
+    this->new_config_.high_thresh[(uint8_t) 3] = rg3_move;
+    this->new_config_.low_thresh[(uint8_t) 3] = rg3_still;
+    this->new_config_.high_thresh[(uint8_t) 4] = rg4_move;
+    this->new_config_.low_thresh[(uint8_t) 4] = rg4_still;
+    this->new_config_.high_thresh[(uint8_t) 5] = rg5_move;
+    this->new_config_.low_thresh[(uint8_t) 5] = rg5_still;
+    this->new_config_.high_thresh[(uint8_t) 6] = rg6_move;
+    this->new_config_.low_thresh[(uint8_t) 6] = rg6_still;
+    this->new_config_.high_thresh[(uint8_t) 7] = rg7_move;
+    this->new_config_.low_thresh[(uint8_t) 7] = rg7_still;
+    this->new_config_.high_thresh[(uint8_t) 8] = rg8_move;
+    this->new_config_.low_thresh[(uint8_t) 8] = rg8_still;
+    this->new_config_.high_thresh[(uint8_t) 9] = rg9_move;
+    this->new_config_.low_thresh[(uint8_t) 9] = rg9_still;
+    this->new_config_.high_thresh[(uint8_t) 10] = rg10_move;
+    this->new_config_.low_thresh[(uint8_t) 10] = rg10_still;
+    this->new_config_.high_thresh[(uint8_t) 11] = rg11_move;
+    this->new_config_.low_thresh[(uint8_t) 11] = rg11_still;
+    this->new_config_.high_thresh[(uint8_t) 12] = rg12_move;
+    this->new_config_.low_thresh[(uint8_t) 12] = rg12_still;
+    this->new_config_.high_thresh[(uint8_t) 13] = rg13_move;
+    this->new_config_.low_thresh[(uint8_t) 13] = rg13_still;
+    this->new_config_.high_thresh[(uint8_t) 14] = rg14_move;
+    this->new_config_.low_thresh[(uint8_t) 14] = rg14_still;
+    this->new_config_.high_thresh[(uint8_t) 15] = rg15_move;
+    this->new_config_.low_thresh[(uint8_t) 15] = rg15_still;
   };
 
   int32_t last_periodic_millis = millis();
   int32_t last_normal_periodic_millis = millis();
-
 
  protected:
 #ifdef USE_BINARY_SENSOR
@@ -192,9 +180,9 @@ public:
   void handle_stream_data_(uint8_t *buffer, int len);
   void handle_normal_mode_(uint8_t *buffer, int len);
   void handle_ack_data_(uint8_t *buffer, int len);
-  void readline_(uint8_t readch, uint8_t *buffer, int len);
-  void set_object_range_(uint16_t range) {this->object_range_ = range; };
-  void set_object_presence_(bool presence) {this->presence_ = presence; };
+  void readline_(uint8_t rx_data, uint8_t *buffer, int len);
+  void set_object_range_(uint16_t range) { this->object_range_ = range; };
+  void set_object_presence_(bool presence) { this->presence_ = presence; };
 
   uint32_t timeout_;
   uint32_t max_distance_gate_;

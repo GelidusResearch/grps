@@ -3,22 +3,16 @@ from esphome.components import sensor
 import esphome.config_validation as cv
 from esphome.const import (
     DEVICE_CLASS_DISTANCE,
-    DEVICE_CLASS_ENERGY,
     UNIT_CENTIMETER,
-    UNIT_PERCENT,
 )
 from . import CONF_LD2420_ID, LD2420Component
 
 DEPENDENCIES = ["ld2420"]
 CONF_MOVING_DISTANCE = "moving_distance"
-CONF_DETECTION_DISTANCE = "detection_distance"
 
 CONFIG_SCHEMA = {
     cv.GenerateID(CONF_LD2420_ID): cv.use_id(LD2420Component),
     cv.Optional(CONF_MOVING_DISTANCE): sensor.sensor_schema(
-        device_class=DEVICE_CLASS_DISTANCE, unit_of_measurement=UNIT_CENTIMETER
-    ),
-    cv.Optional(CONF_DETECTION_DISTANCE): sensor.sensor_schema(
         device_class=DEVICE_CLASS_DISTANCE, unit_of_measurement=UNIT_CENTIMETER
     ),
 }
@@ -29,6 +23,3 @@ async def to_code(config):
     if CONF_MOVING_DISTANCE in config:
         sens = await sensor.new_sensor(config[CONF_MOVING_DISTANCE])
         cg.add(ld2420_component.set_moving_target_distance_sensor(sens))
-    if CONF_DETECTION_DISTANCE in config:
-        sens = await sensor.new_sensor(config[CONF_DETECTION_DISTANCE])
-        cg.add(ld2420_component.set_detection_distance_sensor(sens))
