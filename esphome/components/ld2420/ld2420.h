@@ -46,8 +46,6 @@ static const uint8_t LD2420_ERROR_NONE = 0x00;
 static const uint8_t LD2420_ERROR_UNKNOWN = 0x01;
 static const uint8_t LD2420_ERROR_TIMEOUT = 0x02;
 
-static const char *err_message[] = {"None", "Unknown", "Timeout"};
-
 // Register address values
 static const uint16_t CMD_MIN_GATE_REG = 0x0000;
 static const uint16_t CMD_MAX_GATE_REG = 0x0001;
@@ -65,6 +63,8 @@ static const uint8_t CMD_FRAME_COMMAND = 6;
 static const uint8_t CMD_FRAME_STATUS = 7;
 static const uint8_t CMD_ERROR_WORD = 8;
 
+static const char *err_message[] = {"None", "Unknown", "Timeout"};  // NOLINT
+
 class LD2420Component : public Component, public uart::UARTDevice {
 #ifdef USE_SENSOR
   SUB_SENSOR(moving_target_distance)
@@ -75,7 +75,7 @@ class LD2420Component : public Component, public uart::UARTDevice {
   void dump_config() override;
   void loop() override;
 
-  struct cmd_frame_t {
+  struct CmdFrameT {
     uint32_t header;
     uint16_t length;
     uint16_t command;
@@ -84,20 +84,11 @@ class LD2420Component : public Component, public uart::UARTDevice {
     uint32_t footer;
   };
 
-  struct cmd_reply_t {
-    uint8_t command;
-    uint8_t status;
-    uint32_t data[4];
-    uint8_t length;
-    uint16_t error;
-    bool ack;
-  };
-
 #ifdef USE_BINARY_SENSOR
   void set_presence_sensor(binary_sensor::BinarySensor *sens) { this->presence_binary_sensor_ = sens; };
 #endif
   float get_setup_priority() const override;
-  int send_cmd_from_array(cmd_frame_t cmd_frame);
+  int send_cmd_from_array(CmdFrameT cmd_frame);
   void handle_cmd_error(uint8_t error);
   void set_timeout(uint16_t value) { this->new_config_.timeout = value; };
   void set_max_gate(uint16_t value) { this->new_config_.max_gate = value; };
@@ -152,7 +143,7 @@ class LD2420Component : public Component, public uart::UARTDevice {
   binary_sensor::BinarySensor *presence_binary_sensor_{nullptr};
 #endif
 
-  struct reg_config_t {
+  struct RegConfigT {
     uint16_t min_gate;
     uint16_t max_gate;
     uint16_t timeout;
@@ -160,17 +151,27 @@ class LD2420Component : public Component, public uart::UARTDevice {
     uint32_t low_thresh[16];
   };
 
-  reg_config_t current_config_;
-  reg_config_t new_config_;
+  struct CmdReplyT {
+    uint8_t command;
+    uint8_t status;
+    uint32_t data[4];
+    uint8_t length;
+    uint16_t error;
+    volatile bool ack;
+  };
+
+  RegConfigT current_config_;
+  RegConfigT new_config_;
+  CmdReplyT cmd_reply_;
 
   bool is_present_() { return presence_; }
-  void get_firmware_version_(void);
+  void get_firmware_version_();
   void set_min_max_distances_timeout_(uint32_t max_gate_distance, uint32_t min_gate_distance, uint32_t timeout);
   int get_gate_threshold_(uint8_t gate);
   void set_gate_threshold_(uint8_t gate);
   void get_reg_value_(uint16_t reg);
   void set_reg_value_(uint16_t reg, uint16_t value);
-  int get_min_max_distances_timeout_(void);
+  int get_min_max_distances_timeout_();
   u_int8_t set_config_mode_(bool enable);
   void set_system_mode_(uint16_t mode);
   uint16_t get_mode_() { return this->system_mode_; };
@@ -178,7 +179,7 @@ class LD2420Component : public Component, public uart::UARTDevice {
   bool get_cmd_active_() { return this->cmd_active_; };
   void set_cmd_active_(bool active) { this->cmd_active_ = active; };
   void handle_stream_data_(uint8_t *buffer, int len);
-  void handle_normal_mode_(uint8_t *buffer, int len);
+  void handle_normal_mode_(const uint8_t *inbuf, int len);
   void handle_ack_data_(uint8_t *buffer, int len);
   void readline_(uint8_t rx_data, uint8_t *buffer, int len);
   void set_object_range_(uint16_t range) { this->object_range_ = range; };

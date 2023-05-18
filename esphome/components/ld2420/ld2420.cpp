@@ -4,7 +4,6 @@ namespace esphome {
 namespace ld2420 {
 
 static const char *const TAG = "ld2420";
-LD2420Component::cmd_reply_t cmd_reply;
 
 float LD2420Component::get_setup_priority() const { return setup_priority::AFTER_CONNECTION; }
 
@@ -20,33 +19,31 @@ void LD2420Component::dump_config() {
 }
 
 void LD2420Component::setup() {
-  int result;
   ESP_LOGCONFIG(TAG, "Setting up LD2420...");
-  flush();
   if (this->set_config_mode_(true) == LD2420_ERROR_TIMEOUT) {
     ESP_LOGCONFIG(TAG, "LD2420 module has failed to respond, check baud rate and serial connections.");
     return;
   }
   this->get_min_max_distances_timeout_();
   this->get_firmware_version_();
-  for (uint8_t gate; gate < 16; gate++) {
+  for (uint8_t gate = 0; gate < 16; gate++) {
     this->get_gate_threshold_(gate);
   }
+
   // Test if the config write values are already set to avoid constant flash writes on the LD2420.
-  result += (memcmp(&this->new_config_.high_thresh, &this->current_config_.high_thresh[0],
-                    sizeof(this->new_config_.high_thresh)));
-  result += (memcmp(&this->new_config_.low_thresh, &this->current_config_.low_thresh[0],
-                    sizeof(this->new_config_.low_thresh)));
-  result += (memcmp(&this->new_config_.min_gate, &this->current_config_.min_gate, 0x6));
-  ESP_LOGD(TAG, "Config compare result: %d", result);
-  // Write to flash only if the config has changed
-  if (result != 0) {
+  if (memcmp(&this->new_config_.high_thresh, &this->current_config_.high_thresh[0],
+             sizeof(this->new_config_.high_thresh)) != 0 ||
+      (memcmp(&this->new_config_.low_thresh, &this->current_config_.low_thresh[0],
+              sizeof(this->new_config_.low_thresh))) != 0 ||
+      (memcmp(&this->new_config_.min_gate, &this->current_config_.min_gate, 0x6)) != 0) {
+    ESP_LOGD(TAG, "Config changed, writing update to LD2420.");
     this->set_min_max_distances_timeout_(this->new_config_.max_gate, this->new_config_.min_gate,
                                          this->new_config_.timeout);
-    for (uint8_t gate; gate < 16; gate++) {
+    for (uint8_t gate = 0; gate < 16; gate++) {
       this->set_gate_threshold_(gate);
     }
   }
+
   this->set_system_mode_(CMD_SYSTEM_MODE_NORMAL);
   this->set_config_mode_(false);
   ESP_LOGCONFIG(TAG, "LD2420 setup complete.");
@@ -119,12 +116,11 @@ void LD2420Component::readline_(uint8_t rx_data, uint8_t *buffer, int len) {
         ESP_LOGD(TAG, "Rx: %s", format_hex_pretty(buffer, pos).c_str());
         set_cmd_active_(false);  // Set command state to inactive after responce.
         this->handle_ack_data_(buffer, pos);
-        pos = 0;  // Reset position
+        pos = 0;
       } else if (buffer[pos - 2] == 0x0D && buffer[pos - 1] == 0x0A) {
         this->handle_normal_mode_(buffer, pos);
         pos = 0;
-      } else if ((pos >= 64) &&
-                 (memcmp(&buffer[pos - 5], &CMD_FRAME_HEADER, sizeof(CMD_FRAME_HEADER) == 0) &&
+      } else if ((pos >= 64 && (memcmp(&buffer[pos - 5], &CMD_FRAME_HEADER, sizeof(CMD_FRAME_HEADER)) == 0) &&
                   buffer[pos - 1] == 0xFA) &&
                  get_mode_() == 0) {
         ESP_LOGD(TAG, "Rx: %s", format_hex_pretty(buffer, pos).c_str());
@@ -148,12 +144,10 @@ void LD2420Component::handle_stream_data_(uint8_t *buffer, int len) {
   // last_periodic_millis = current_millis;
 }
 
-void LD2420Component::handle_normal_mode_(uint8_t *inbuf, int len) {
+void LD2420Component::handle_normal_mode_(const uint8_t *inbuf, int len) {
   const uint8_t bufsize = 16;
   uint8_t index = 0;
   uint8_t pos = 0;
-  uint8_t range = 0;
-  bool present;
   char *endptr;
   char outbuf[bufsize];
   while (true) {
@@ -181,7 +175,7 @@ void LD2420Component::handle_normal_mode_(uint8_t *inbuf, int len) {
 
   if (system_mode_ == CMD_SYSTEM_MODE_NORMAL) {
     // Resonable refresh rate for home assistant database size health
-    int32_t current_millis = millis();
+    const int32_t current_millis = millis();
     if (current_millis - last_normal_periodic_millis < REFRESH_RATE_MS)
       return;
     last_normal_periodic_millis = current_millis;
@@ -204,12 +198,25 @@ void LD2420Component::handle_normal_mode_(uint8_t *inbuf, int len) {
 }
 
 void LD2420Component::handle_ack_data_(uint8_t *buffer, int len) {
-  cmd_reply.command = buffer[CMD_FRAME_COMMAND];
-  cmd_reply.ack = true;
-  uint16_t data_pos;
-  memcpy(&cmd_reply.error, &buffer[CMD_ERROR_WORD], sizeof(cmd_reply.error));
-  const char *result = cmd_reply.error ? "failure" : "success";
-  switch ((uint16_t) cmd_reply.command) {
+  cmd_reply_.command = buffer[CMD_FRAME_COMMAND];
+  cmd_reply_.length = buffer[CMD_FRAME_DATA_LENGTH];
+  uint8_t reg_element = 0;
+  uint8_t data_element = 0;
+  uint16_t data_pos = 0;
+  if (cmd_reply_.length > 64) {
+    ESP_LOGD(TAG, "LD2420 reply - received frame is corrupt, data lenght exceeds 64 bytes.");
+    return;
+  } else if (cmd_reply_.length < 2) {
+    ESP_LOGD(TAG, "LD2420 reply - received frame is corrupt, data lenght is less than 2 bytes.");
+    return;
+  }
+  memcpy(&cmd_reply_.error, &buffer[CMD_ERROR_WORD], sizeof(cmd_reply_.error));
+  const char *result = cmd_reply_.error ? "failure" : "success";
+  if (cmd_reply_.error > 0) {
+    return;
+  };
+  cmd_reply_.ack = true;
+  switch ((uint16_t) cmd_reply_.command) {
     case (CMD_ENABLE_CONF):
       ESP_LOGD(TAG, "LD2420 reply - set config enable: CMD = %2X %s", CMD_ENABLE_CONF, result);
       break;
@@ -218,16 +225,16 @@ void LD2420Component::handle_ack_data_(uint8_t *buffer, int len) {
       break;
     case (CMD_READ_REGISTER):
       ESP_LOGD(TAG, "LD2420 reply - read register: CMD = %2X %s", CMD_READ_REGISTER, result);
-      uint8_t reg_element;
+      // TODO Read/Write register is not implemented yet, this will get flushed out to a proper header file
       data_pos = 0x0A;
-      for (uint8_t index;
-           index < (CMD_REG_DATA_REPLY_SIZE * ((buffer[CMD_FRAME_DATA_LENGTH] - 4) / CMD_REG_DATA_REPLY_SIZE));
+      for (uint16_t index = 0; index < (CMD_REG_DATA_REPLY_SIZE *  // NOLINT
+                                        ((buffer[CMD_FRAME_DATA_LENGTH] - 4) / CMD_REG_DATA_REPLY_SIZE));
            index += CMD_REG_DATA_REPLY_SIZE) {
-        memcpy(&cmd_reply.data[reg_element], &buffer[data_pos + index], sizeof(CMD_REG_DATA_REPLY_SIZE));
-        byteswap(cmd_reply.data[reg_element]);
-        ESP_LOGD(TAG, "Data[%2X]: %s", reg_element, format_hex_pretty(cmd_reply.data[reg_element]).c_str());
+        memcpy(&cmd_reply_.data[reg_element], &buffer[data_pos + index], sizeof(CMD_REG_DATA_REPLY_SIZE));
+        byteswap(cmd_reply_.data[reg_element]);
+        ESP_LOGD(TAG, "Data[%2X]: %s", reg_element, format_hex_pretty(cmd_reply_.data[reg_element]).c_str());
         reg_element++;
-      }
+      }  // NOLINT
       break;
     case (CMD_WRITE_REGISTER):
       ESP_LOGD(TAG, "LD2420 reply - write register: CMD = %2X %s", CMD_WRITE_REGISTER, result);
@@ -237,16 +244,15 @@ void LD2420Component::handle_ack_data_(uint8_t *buffer, int len) {
       break;
     case (CMD_READ_ABD_PARAM):
       ESP_LOGD(TAG, "LD2420 reply - read gate parameter(s): %2X %s", CMD_READ_ABD_PARAM, result);
-      uint8_t data_element;
       data_pos = CMD_ABD_DATA_REPLY_START;
-      for (uint8_t index;
-           index < (CMD_ABD_DATA_REPLY_SIZE * ((buffer[CMD_FRAME_DATA_LENGTH] - 4) / CMD_ABD_DATA_REPLY_SIZE));
+      for (uint16_t index = 0; index < (CMD_ABD_DATA_REPLY_SIZE *  // NOLINT
+                                        ((buffer[CMD_FRAME_DATA_LENGTH] - 4) / CMD_ABD_DATA_REPLY_SIZE));
            index += CMD_ABD_DATA_REPLY_SIZE) {
-        memcpy(&cmd_reply.data[data_element], &buffer[data_pos + index], sizeof(cmd_reply.data[data_element]));
-        byteswap(cmd_reply.data[data_element]);
-        ESP_LOGD(TAG, "Data[%2X]: %s", data_element, format_hex_pretty(cmd_reply.data[data_element]).c_str());
+        memcpy(&cmd_reply_.data[data_element], &buffer[data_pos + index], sizeof(cmd_reply_.data[data_element]));
+        byteswap(cmd_reply_.data[data_element]);
+        ESP_LOGD(TAG, "Data[%2X]: %s", data_element, format_hex_pretty(cmd_reply_.data[data_element]).c_str());
         data_element++;
-      }
+      }  // NOLINT
       break;
     case (CMD_WRITE_SYS_PARAM):
       ESP_LOGD(TAG, "LD2420 reply - set system parameter(s): %2X %s", CMD_WRITE_SYS_PARAM, result);
@@ -261,19 +267,20 @@ void LD2420Component::handle_ack_data_(uint8_t *buffer, int len) {
   }
 }
 
-int LD2420Component::send_cmd_from_array(cmd_frame_t frame) {
+int LD2420Component::send_cmd_from_array(CmdFrameT frame) {
   uint8_t error = 0;
   uint8_t ack_buffer[64];
   uint8_t cmd_buffer[64];
-  uint16_t data_length;
   uint16_t loop_count;
-  cmd_reply.ack = false;
+  cmd_reply_.ack = false;
   set_cmd_active_(true);
   uint8_t retry = 3;
   while (retry) {
-    loop_count = 1250;  // TODO setup a dynamic way to tune for non ESP32 240Mhz devices
+    // TODO setup a dynamic method e.g. millis time count etc. to tune for non ESP32 240Mhz devices
+    // this is ok for now since the module firmware is changing like the weather atm
     frame.length = 0;
-    uint16_t frame_data_bytes = frame.data_length + 2;
+    loop_count = 1250;
+    uint16_t frame_data_bytes = frame.data_length + 2;  // Always add two bytes for the cmd size
 
     memcpy(&cmd_buffer[frame.length], &frame.header, sizeof(frame.header));
     frame.length += sizeof(frame.header);
@@ -284,14 +291,14 @@ int LD2420Component::send_cmd_from_array(cmd_frame_t frame) {
     memcpy(&cmd_buffer[frame.length], &frame.command, sizeof(frame.command));
     frame.length += sizeof(frame.command);
 
-    for (uint8_t index; index < frame.data_length; index++) {
+    for (uint16_t index = 0; index < frame.data_length; index++) {
       memcpy(&cmd_buffer[frame.length], &frame.data[index], sizeof(frame.data[index]));
       frame.length += sizeof(frame.data[index]);
     }
 
     memcpy(cmd_buffer + frame.length, &frame.footer, sizeof(frame.footer));
     frame.length += sizeof(frame.footer);
-    for (uint8_t index = 0; index < frame.length; index++) {
+    for (uint16_t index = 0; index < frame.length; index++) {
       this->write_byte(cmd_buffer[index]);
     }
 
@@ -299,7 +306,7 @@ int LD2420Component::send_cmd_from_array(cmd_frame_t frame) {
 
     delay_microseconds_safe(500);  // give the module a moment to process it
     error = 0;
-    while (!cmd_reply.ack) {
+    while (!cmd_reply_.ack) {
       while (available()) {
         this->readline_(read(), ack_buffer, sizeof(ack_buffer));
       }
@@ -311,16 +318,16 @@ int LD2420Component::send_cmd_from_array(cmd_frame_t frame) {
       }
       loop_count--;
     }
-    if (cmd_reply.ack)
+    if (cmd_reply_.ack)
       retry = 0;
-    if (cmd_reply.error > 0)
+    if (cmd_reply_.error > 0)
       handle_cmd_error(error);
   }
   return error;
 }
 
 uint8_t LD2420Component::set_config_mode_(bool enable) {
-  cmd_frame_t cmd_frame;
+  CmdFrameT cmd_frame;
   cmd_frame.data_length = 0;
   cmd_frame.header = CMD_FRAME_HEADER;
   cmd_frame.command = enable ? CMD_ENABLE_CONF : CMD_DISABLE_CONF;
@@ -334,8 +341,7 @@ uint8_t LD2420Component::set_config_mode_(bool enable) {
 }
 
 void LD2420Component::get_reg_value_(uint16_t reg) {
-  cmd_frame_t cmd_frame;
-  uint16_t rx_data = reg;
+  CmdFrameT cmd_frame;
   cmd_frame.data_length = 0;
   cmd_frame.header = CMD_FRAME_HEADER;
   cmd_frame.command = CMD_READ_REGISTER;
@@ -347,7 +353,8 @@ void LD2420Component::get_reg_value_(uint16_t reg) {
 }
 
 void LD2420Component::set_reg_value_(uint16_t reg, uint16_t value) {
-  cmd_frame_t cmd_frame;
+  CmdFrameT cmd_frame;
+  cmd_frame.data_length = 0;
   cmd_frame.header = CMD_FRAME_HEADER;
   cmd_frame.command = CMD_WRITE_REGISTER;
   memcpy(&cmd_frame.data[cmd_frame.data_length], &reg, sizeof(CMD_REG_DATA_REPLY_SIZE));
@@ -363,7 +370,7 @@ void LD2420Component::handle_cmd_error(uint8_t error) { ESP_LOGI(TAG, "Command f
 
 int LD2420Component::get_gate_threshold_(uint8_t gate) {
   uint8_t error;
-  cmd_frame_t cmd_frame;
+  CmdFrameT cmd_frame;
   cmd_frame.data_length = 0;
   cmd_frame.header = CMD_FRAME_HEADER;
   cmd_frame.command = CMD_READ_ABD_PARAM;
@@ -375,16 +382,15 @@ int LD2420Component::get_gate_threshold_(uint8_t gate) {
   ESP_LOGD(TAG, "Sending read gate %d high/low theshold command: %2X", gate, cmd_frame.command);
   error = this->send_cmd_from_array(cmd_frame);
   if (error == 0) {
-    current_config_.high_thresh[gate] = cmd_reply.data[0];
-    current_config_.low_thresh[gate] = cmd_reply.data[1];
+    current_config_.high_thresh[gate] = cmd_reply_.data[0];
+    current_config_.low_thresh[gate] = cmd_reply_.data[1];
   }
   return error;
 }
 
-int LD2420Component::get_min_max_distances_timeout_(void) {
+int LD2420Component::get_min_max_distances_timeout_() {
   uint8_t error;
-  cmd_frame_t cmd_frame;
-  uint8_t pos;
+  CmdFrameT cmd_frame;
   cmd_frame.data_length = 0;
   cmd_frame.header = CMD_FRAME_HEADER;
   cmd_frame.command = CMD_READ_ABD_PARAM;
@@ -401,15 +407,15 @@ int LD2420Component::get_min_max_distances_timeout_(void) {
   ESP_LOGD(TAG, "Sending read gate min max and timeout command: %2X", cmd_frame.command);
   error = this->send_cmd_from_array(cmd_frame);
   if (error == 0) {
-    current_config_.min_gate = (uint16_t) cmd_reply.data[0];
-    current_config_.max_gate = (uint16_t) cmd_reply.data[1];
-    current_config_.timeout = (uint16_t) cmd_reply.data[2];
+    current_config_.min_gate = (uint16_t) cmd_reply_.data[0];
+    current_config_.max_gate = (uint16_t) cmd_reply_.data[1];
+    current_config_.timeout = (uint16_t) cmd_reply_.data[2];
   }
   return error;
 }
 
 void LD2420Component::set_system_mode_(uint16_t mode) {
-  cmd_frame_t cmd_frame;
+  CmdFrameT cmd_frame;
   uint16_t unknown_parm = 0x0000;
   cmd_frame.data_length = 0;
   cmd_frame.header = CMD_FRAME_HEADER;
@@ -426,8 +432,8 @@ void LD2420Component::set_system_mode_(uint16_t mode) {
     set_mode_(mode);
 }
 
-void LD2420Component::get_firmware_version_(void) {
-  cmd_frame_t cmd_frame;
+void LD2420Component::get_firmware_version_() {
+  CmdFrameT cmd_frame;
   cmd_frame.data_length = 0;
   cmd_frame.header = CMD_FRAME_HEADER;
   cmd_frame.command = CMD_READ_VERSION;
@@ -437,14 +443,14 @@ void LD2420Component::get_firmware_version_(void) {
   this->send_cmd_from_array(cmd_frame);
 }
 
-void LD2420Component::set_min_max_distances_timeout_(uint32_t max_gate_distance, uint32_t min_gate_distance,
+void LD2420Component::set_min_max_distances_timeout_(uint32_t max_gate_distance, uint32_t min_gate_distance,  // NOLINT
                                                      uint32_t timeout) {
   // Header H, Length L, Register R, Value V, Footer F
   //                        |Min Gate         |Max Gate         |Timeout          |
   // HH HH HH HH LL LL CC CC RR RR VV VV VV VV RR RR VV VV VV VV RR RR VV VV VV VV FF FF FF FF
   // FD FC FB FA 14 00 07 00 00 00 01 00 00 00 01 00 09 00 00 00 04 00 0A 00 00 00 04 03 02 01 e.g.
 
-  cmd_frame_t cmd_frame;
+  CmdFrameT cmd_frame;
   cmd_frame.data_length = 0;
   cmd_frame.header = CMD_FRAME_HEADER;
   cmd_frame.command = CMD_WRITE_ABD_PARAM;
@@ -475,10 +481,9 @@ void LD2420Component::set_gate_threshold_(uint8_t gate) {
   // HH HH HH HH LL LL CC CC RR RR VV VV VV VV RR RR VV VV VV VV FF FF FF FF
   // FD FC FB FA 14 00 07 00 10 00 00 FF 00 00 00 01 00 0F 00 00 04 03 02 01
 
-  uint8_t error;
   uint16_t high_threshold_gate = CMD_GATE_HIGH_THRESH[gate];
   uint16_t low_threshold_gate = CMD_GATE_LOW_THRESH[gate];
-  cmd_frame_t cmd_frame;
+  CmdFrameT cmd_frame;
   cmd_frame.data_length = 0;
   cmd_frame.header = CMD_FRAME_HEADER;
   cmd_frame.command = CMD_WRITE_ABD_PARAM;
