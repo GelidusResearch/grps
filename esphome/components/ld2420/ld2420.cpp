@@ -1,20 +1,15 @@
 #include "ld2420.h"
+#include "esphome/core/helpers.h"
 
 namespace esphome {
 namespace ld2420 {
 
 static const char *const TAG = "ld2420";
 
-float LD2420Component::get_setup_priority() const { return setup_priority::AFTER_CONNECTION; }
+float LD2420Component::get_setup_priority() const { return setup_priority::DATA; }
 
 void LD2420Component::dump_config() {
   ESP_LOGCONFIG(TAG, "LD2420:");
-#ifdef USE_BINARY_SENSOR
-  LOG_BINARY_SENSOR("  ", "HasPresenceSensor", this->presence_binary_sensor_);
-#endif
-#ifdef USE_SENSOR
-  LOG_SENSOR("  ", "Moving Distance", this->moving_target_distance_sensor_);
-#endif
   ESP_LOGCONFIG(TAG, "  Firmware Version : %7s", this->ld2420_firmware_ver_);
 }
 
@@ -52,6 +47,8 @@ void LD2420Component::setup() {
 void LD2420Component::loop() {
   // If there is a active send command do not process it here, the send command call will handle it.
   if (!get_cmd_active_()) {
+    if (!available())
+      return;
     static uint8_t buffer[2048];
     static uint8_t rx_data;
     while (available()) {
@@ -146,15 +143,15 @@ void LD2420Component::handle_stream_data_(uint8_t *buffer, int len) {
 
 void LD2420Component::handle_normal_mode_(const uint8_t *inbuf, int len) {
   const uint8_t bufsize = 16;
-  uint8_t index = 0;
-  uint8_t pos = 0;
-  char *endptr;
-  char outbuf[bufsize];
+  uint8_t index{0};
+  uint8_t pos{0};
+  char *endptr{nullptr};
+  char outbuf[bufsize]{0};
   while (true) {
     if (inbuf[pos - 2] == 'O' && inbuf[pos - 1] == 'F' && inbuf[pos] == 'F') {
-      this->set_object_presence_(false);
+      set_presence_(false);
     } else if (inbuf[pos - 1] == 'O' && inbuf[pos] == 'N') {
-      this->set_object_presence_(true);
+      set_presence_(true);
     }
     if (inbuf[pos] >= '0' && inbuf[pos] <= '9') {
       if (index < bufsize - 1) {
@@ -170,30 +167,19 @@ void LD2420Component::handle_normal_mode_(const uint8_t *inbuf, int len) {
     }
   }
   outbuf[index] = '\0';
-  if (index > 0)
-    this->set_object_range_(strtol(outbuf, &endptr, 10));
+  if (index > 1)
+    set_distance_(strtol(outbuf, &endptr, 10));
 
-  if (system_mode_ == CMD_SYSTEM_MODE_NORMAL) {
+  if (get_mode_() == CMD_SYSTEM_MODE_NORMAL) {
     // Resonable refresh rate for home assistant database size health
     const int32_t current_millis = millis();
     if (current_millis - last_normal_periodic_millis < REFRESH_RATE_MS)
       return;
     last_normal_periodic_millis = current_millis;
-
-#ifdef USE_BINARY_SENSOR
-    if (this->presence_binary_sensor_ != nullptr) {
-      if (this->presence_binary_sensor_->state != this->is_present_()) {
-        this->presence_binary_sensor_->publish_state(this->is_present_());
-      }
-    }
-#endif
-
-#ifdef USE_SENSOR
-    if (this->moving_target_distance_sensor_ != nullptr) {
-      if (this->moving_target_distance_sensor_->get_state() != this->object_range_)
-        this->moving_target_distance_sensor_->publish_state(this->object_range_);
-    }
-#endif
+    for (auto &listener : this->listeners_)
+      listener->on_distance(get_distance_());
+    for (auto &listener : this->listeners_)
+      listener->on_presence(get_presence_());
   }
 }
 
@@ -234,7 +220,7 @@ void LD2420Component::handle_ack_data_(uint8_t *buffer, int len) {
         byteswap(cmd_reply_.data[reg_element]);
         ESP_LOGD(TAG, "Data[%2X]: %s", reg_element, format_hex_pretty(cmd_reply_.data[reg_element]).c_str());
         reg_element++;
-      }  // NOLINT
+      }
       break;
     case (CMD_WRITE_REGISTER):
       ESP_LOGD(TAG, "LD2420 reply - write register: CMD = %2X %s", CMD_WRITE_REGISTER, result);
@@ -252,7 +238,7 @@ void LD2420Component::handle_ack_data_(uint8_t *buffer, int len) {
         byteswap(cmd_reply_.data[data_element]);
         ESP_LOGD(TAG, "Data[%2X]: %s", data_element, format_hex_pretty(cmd_reply_.data[data_element]).c_str());
         data_element++;
-      }  // NOLINT
+      }
       break;
     case (CMD_WRITE_SYS_PARAM):
       ESP_LOGD(TAG, "LD2420 reply - set system parameter(s): %2X %s", CMD_WRITE_SYS_PARAM, result);
@@ -366,7 +352,7 @@ void LD2420Component::set_reg_value_(uint16_t reg, uint16_t value) {
   this->send_cmd_from_array(cmd_frame);
 }
 
-void LD2420Component::handle_cmd_error(uint8_t error) { ESP_LOGI(TAG, "Command failed: %s", err_message[error]); }
+void LD2420Component::handle_cmd_error(uint8_t error) { ESP_LOGI(TAG, "Command failed: %s", ERR_MESSAGE[error]); }
 
 int LD2420Component::get_gate_threshold_(uint8_t gate) {
   uint8_t error;

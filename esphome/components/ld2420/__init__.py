@@ -2,18 +2,17 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import uart
 from esphome.const import CONF_ID
-from esphome import automation
-from esphome.automation import maybe_simple_id
+
+CODEOWNERS = ["@descipher"]
 
 DEPENDENCIES = ["uart"]
-CODEOWNERS = ["@descipher"]
+
 MULTI_CONF = True
 
 ld2420_ns = cg.esphome_ns.namespace("ld2420")
 LD2420Component = ld2420_ns.class_("LD2420Component", cg.Component, uart.UARTDevice)
-LD2420Restart = ld2420_ns.class_("LD2420Restart", automation.Action)
-CONF_LD2420_ID = "ld2420_id"
 
+CONF_LD2420_ID = "ld2420_id"
 CONF_DETECTION_GATE_MIN = "detection_gate_min"
 CONF_DETECTION_GATE_MAX = "detection_gate_max"
 CONF_PRESENCE_TIME_WINDOW = "presence_time_window"
@@ -66,102 +65,38 @@ CONFIG_SCHEMA = cv.All(
                 cv.positive_time_period_seconds,
                 cv.Range(max=cv.TimePeriod(seconds=32767)),
             ),
-            cv.Optional(CONF_G0_MOVE_THRESHOLD, default=60000): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G0_STILL_THRESHOLD, default=40000): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G1_MOVE_THRESHOLD, default=40000): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G1_STILL_THRESHOLD, default=20000): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G2_MOVE_THRESHOLD, default=4000): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G2_STILL_THRESHOLD, default=400): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G3_MOVE_THRESHOLD, default=2000): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G3_STILL_THRESHOLD, default=300): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G4_MOVE_THRESHOLD, default=500): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G4_STILL_THRESHOLD, default=200): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G5_MOVE_THRESHOLD, default=500): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G5_STILL_THRESHOLD, default=200): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G6_MOVE_THRESHOLD, default=400): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G6_STILL_THRESHOLD, default=200): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G7_MOVE_THRESHOLD, default=400): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G7_STILL_THRESHOLD, default=200): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G8_MOVE_THRESHOLD, default=400): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G8_STILL_THRESHOLD, default=200): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G9_MOVE_THRESHOLD, default=300): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G9_STILL_THRESHOLD, default=150): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G10_MOVE_THRESHOLD, default=300): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G10_STILL_THRESHOLD, default=150): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G11_MOVE_THRESHOLD, default=200): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G11_STILL_THRESHOLD, default=100): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G12_MOVE_THRESHOLD, default=200): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G12_STILL_THRESHOLD, default=100): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G13_MOVE_THRESHOLD, default=200): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G13_STILL_THRESHOLD, default=100): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G14_MOVE_THRESHOLD, default=200): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G14_STILL_THRESHOLD, default=100): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G15_MOVE_THRESHOLD, default=200): cv.int_range(
-                min=0, max=65535
-            ),
-            cv.Optional(CONF_G15_STILL_THRESHOLD, default=100): cv.int_range(
-                min=0, max=65535
-            ),
+            cv.Optional(CONF_G0_MOVE_THRESHOLD, default=60000): cv.uint16_t,
+            cv.Optional(CONF_G0_STILL_THRESHOLD, default=40000): cv.uint16_t,
+            cv.Optional(CONF_G1_MOVE_THRESHOLD, default=40000): cv.uint16_t,
+            cv.Optional(CONF_G1_STILL_THRESHOLD, default=20000): cv.uint16_t,
+            cv.Optional(CONF_G2_MOVE_THRESHOLD, default=4000): cv.uint16_t,
+            cv.Optional(CONF_G2_STILL_THRESHOLD, default=400): cv.uint16_t,
+            cv.Optional(CONF_G3_MOVE_THRESHOLD, default=2000): cv.uint16_t,
+            cv.Optional(CONF_G3_STILL_THRESHOLD, default=300): cv.uint16_t,
+            cv.Optional(CONF_G4_MOVE_THRESHOLD, default=500): cv.uint16_t,
+            cv.Optional(CONF_G4_STILL_THRESHOLD, default=200): cv.uint16_t,
+            cv.Optional(CONF_G5_MOVE_THRESHOLD, default=500): cv.uint16_t,
+            cv.Optional(CONF_G5_STILL_THRESHOLD, default=200): cv.uint16_t,
+            cv.Optional(CONF_G6_MOVE_THRESHOLD, default=400): cv.uint16_t,
+            cv.Optional(CONF_G6_STILL_THRESHOLD, default=200): cv.uint16_t,
+            cv.Optional(CONF_G7_MOVE_THRESHOLD, default=400): cv.uint16_t,
+            cv.Optional(CONF_G7_STILL_THRESHOLD, default=200): cv.uint16_t,
+            cv.Optional(CONF_G8_MOVE_THRESHOLD, default=400): cv.uint16_t,
+            cv.Optional(CONF_G8_STILL_THRESHOLD, default=200): cv.uint16_t,
+            cv.Optional(CONF_G9_MOVE_THRESHOLD, default=300): cv.uint16_t,
+            cv.Optional(CONF_G9_STILL_THRESHOLD, default=150): cv.uint16_t,
+            cv.Optional(CONF_G10_MOVE_THRESHOLD, default=300): cv.uint16_t,
+            cv.Optional(CONF_G10_STILL_THRESHOLD, default=150): cv.uint16_t,
+            cv.Optional(CONF_G11_MOVE_THRESHOLD, default=200): cv.uint16_t,
+            cv.Optional(CONF_G11_STILL_THRESHOLD, default=100): cv.uint16_t,
+            cv.Optional(CONF_G12_MOVE_THRESHOLD, default=200): cv.uint16_t,
+            cv.Optional(CONF_G12_STILL_THRESHOLD, default=100): cv.uint16_t,
+            cv.Optional(CONF_G13_MOVE_THRESHOLD, default=200): cv.uint16_t,
+            cv.Optional(CONF_G13_STILL_THRESHOLD, default=100): cv.uint16_t,
+            cv.Optional(CONF_G14_MOVE_THRESHOLD, default=200): cv.uint16_t,
+            cv.Optional(CONF_G14_STILL_THRESHOLD, default=100): cv.uint16_t,
+            cv.Optional(CONF_G15_MOVE_THRESHOLD, default=200): cv.uint16_t,
+            cv.Optional(CONF_G15_STILL_THRESHOLD, default=100): cv.uint16_t,
         }
     )
     .extend(uart.UART_DEVICE_SCHEMA)
@@ -169,7 +104,7 @@ CONFIG_SCHEMA = cv.All(
 )
 
 FINAL_VALIDATE_SCHEMA = uart.final_validate_device_schema(
-    "ld2420",
+    "ld2420_uart",
     require_tx=True,
     require_rx=True,
     parity="NONE",
@@ -185,7 +120,7 @@ async def to_code(config):
     cg.add(var.set_min_gate(config[CONF_DETECTION_GATE_MIN]))
     cg.add(var.set_max_gate(config[CONF_DETECTION_GATE_MAX]))
     cg.add(
-        var.set_range_config(
+        var.set_gate_sense_config(
             config[CONF_G0_MOVE_THRESHOLD],
             config[CONF_G0_STILL_THRESHOLD],
             config[CONF_G1_MOVE_THRESHOLD],
@@ -220,10 +155,3 @@ async def to_code(config):
             config[CONF_G15_STILL_THRESHOLD],
         )
     )
-
-
-CALIBRATION_ACTION_SCHEMA = maybe_simple_id(
-    {
-        cv.Required(CONF_ID): cv.use_id(LD2420Component),
-    }
-)

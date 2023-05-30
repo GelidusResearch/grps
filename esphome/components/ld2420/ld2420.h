@@ -1,12 +1,6 @@
 #pragma once
-#include "esphome/core/defines.h"
+
 #include "esphome/core/component.h"
-#ifdef USE_BINARY_SENSOR
-#include "esphome/components/binary_sensor/binary_sensor.h"
-#endif
-#ifdef USE_SENSOR
-#include "esphome/components/sensor/sensor.h"
-#endif
 #include "esphome/components/uart/uart.h"
 #include "esphome/core/automation.h"
 #include "esphome/core/helpers.h"
@@ -63,17 +57,21 @@ static const uint8_t CMD_FRAME_COMMAND = 6;
 static const uint8_t CMD_FRAME_STATUS = 7;
 static const uint8_t CMD_ERROR_WORD = 8;
 
-static const char *err_message[] = {"None", "Unknown", "Timeout"};  // NOLINT
+static constexpr const char *ERR_MESSAGE[] = {"None", "Unknown", "Timeout"};
+
+class LD2420Listener {
+ public:
+  virtual void on_presence(bool presence){};
+  virtual void on_distance(uint16_t distance){};
+};
 
 class LD2420Component : public Component, public uart::UARTDevice {
-#ifdef USE_SENSOR
-  SUB_SENSOR(moving_target_distance)
-#endif
-
  public:
   void setup() override;
   void dump_config() override;
   void loop() override;
+
+  void register_listener(LD2420Listener *listener) { this->listeners_.push_back(listener); }
 
   struct CmdFrameT {
     uint32_t header;
@@ -84,23 +82,20 @@ class LD2420Component : public Component, public uart::UARTDevice {
     uint32_t footer;
   };
 
-#ifdef USE_BINARY_SENSOR
-  void set_presence_sensor(binary_sensor::BinarySensor *sens) { this->presence_binary_sensor_ = sens; };
-#endif
   float get_setup_priority() const override;
   int send_cmd_from_array(CmdFrameT cmd_frame);
   void handle_cmd_error(uint8_t error);
   void set_timeout(uint16_t value) { this->new_config_.timeout = value; };
   void set_max_gate(uint16_t value) { this->new_config_.max_gate = value; };
   void set_min_gate(uint16_t value) { this->new_config_.min_gate = value; };
-  void set_range_config(uint32_t rg0_move, uint32_t rg0_still, uint32_t rg1_move, uint32_t rg1_still, uint32_t rg2_move,
-                        uint32_t rg2_still, uint32_t rg3_move, uint32_t rg3_still, uint32_t rg4_move,
-                        uint32_t rg4_still, uint32_t rg5_move, uint32_t rg5_still, uint32_t rg6_move,
-                        uint32_t rg6_still, uint32_t rg7_move, uint32_t rg7_still, uint32_t rg8_move,
-                        uint32_t rg8_still, uint32_t rg9_move, uint32_t rg9_still, uint32_t rg10_move,
-                        uint32_t rg10_still, uint32_t rg11_move, uint32_t rg11_still, uint32_t rg12_move,
-                        uint32_t rg12_still, uint32_t rg13_move, uint32_t rg13_still, uint32_t rg14_move,
-                        uint32_t rg14_still, uint32_t rg15_move, uint32_t rg15_still) {
+  void set_gate_sense_config(uint32_t rg0_move, uint32_t rg0_still, uint32_t rg1_move, uint32_t rg1_still,
+                             uint32_t rg2_move, uint32_t rg2_still, uint32_t rg3_move, uint32_t rg3_still,
+                             uint32_t rg4_move, uint32_t rg4_still, uint32_t rg5_move, uint32_t rg5_still,
+                             uint32_t rg6_move, uint32_t rg6_still, uint32_t rg7_move, uint32_t rg7_still,
+                             uint32_t rg8_move, uint32_t rg8_still, uint32_t rg9_move, uint32_t rg9_still,
+                             uint32_t rg10_move, uint32_t rg10_still, uint32_t rg11_move, uint32_t rg11_still,
+                             uint32_t rg12_move, uint32_t rg12_still, uint32_t rg13_move, uint32_t rg13_still,
+                             uint32_t rg14_move, uint32_t rg14_still, uint32_t rg15_move, uint32_t rg15_still) {
     this->new_config_.high_thresh[(uint8_t) 0] = rg0_move;
     this->new_config_.low_thresh[(uint8_t) 0] = rg0_still;
     this->new_config_.high_thresh[(uint8_t) 1] = rg1_move;
@@ -139,10 +134,6 @@ class LD2420Component : public Component, public uart::UARTDevice {
   int32_t last_normal_periodic_millis = millis();
 
  protected:
-#ifdef USE_BINARY_SENSOR
-  binary_sensor::BinarySensor *presence_binary_sensor_{nullptr};
-#endif
-
   struct RegConfigT {
     uint16_t min_gate;
     uint16_t max_gate;
@@ -164,7 +155,6 @@ class LD2420Component : public Component, public uart::UARTDevice {
   RegConfigT new_config_;
   CmdReplyT cmd_reply_;
 
-  bool is_present_() { return presence_; }
   void get_firmware_version_();
   void set_min_max_distances_timeout_(uint32_t max_gate_distance, uint32_t min_gate_distance, uint32_t timeout);
   int get_gate_threshold_(uint8_t gate);
@@ -176,23 +166,26 @@ class LD2420Component : public Component, public uart::UARTDevice {
   void set_system_mode_(uint16_t mode);
   uint16_t get_mode_() { return this->system_mode_; };
   void set_mode_(uint16_t mode) { this->system_mode_ = mode; };
+  bool get_presence_() { return this->presence_; };
+  void set_presence_(bool presence) { this->presence_ = presence; };
+  uint16_t get_distance_() { return this->distance_; };
+  void set_distance_(uint16_t distance) { this->distance_ = distance; };
   bool get_cmd_active_() { return this->cmd_active_; };
   void set_cmd_active_(bool active) { this->cmd_active_ = active; };
   void handle_stream_data_(uint8_t *buffer, int len);
   void handle_normal_mode_(const uint8_t *inbuf, int len);
   void handle_ack_data_(uint8_t *buffer, int len);
   void readline_(uint8_t rx_data, uint8_t *buffer, int len);
-  void set_object_range_(uint16_t range) { this->object_range_ = range; };
-  void set_object_presence_(bool presence) { this->presence_ = presence; };
 
   uint32_t timeout_;
   uint32_t max_distance_gate_;
   uint32_t min_distance_gate_;
-  uint16_t object_range_;
   uint16_t system_mode_{0xFFFF};
-  bool presence_{false};
   bool cmd_active_{false};
   char ld2420_firmware_ver_[8];
+  bool presence_{false};
+  uint16_t distance_{0};
+  std::vector<LD2420Listener *> listeners_{};
 };
 
 }  // namespace ld2420
