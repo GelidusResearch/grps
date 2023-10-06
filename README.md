@@ -68,8 +68,8 @@ web_server:
 
 uart:
   id: ubus
-  tx_pin: GPIO16
-  rx_pin: GPIO17
+  tx_pin: GPIO17
+  rx_pin: GPIO16
   baud_rate: 115200
   parity: NONE
   stop_bits: 1
@@ -124,7 +124,9 @@ binary_sensor:
 
 switch:
   - platform: restart
-    name: Restart    
+    name: Restart
+status_led:
+  pin: GPIO23
 ```
 
 
