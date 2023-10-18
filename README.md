@@ -13,28 +13,68 @@ TODO
 ESPHome Configuration
 =====================
 
-TODO
-
-Notes
-=====
-
-This module is very new and Hi-Link has changed several items in the process of this development.
+Hi-Link has changed several items in the process of this development.
 Depending on the firmware you have the baudrate will be 256000 for any module with less than firmware v1.5.3
 Also the tx_pin was moved from ot2 to ot1 with firmware v1.5.3 
-There are known errors in the serial protocol document released by Hi-Link, no updates are available at this time.
-This component is fully functional and ready for field test drives.
-Thanks for your interest!   
+Firmware v1.5.4 now features the ability to observe gate energy signal levels and with this release we can dynamically 
+calibrate gate still and move thresholds. We have now refactored the previous external component with this capability.
+We have added dynamic configuration functionallity with a compact UI format.
+select, number and button components provide configuration value inputs and control.
+
+Select:
+  Select will set the operational mode of the ld2420 component. Four modes are availble.
+  Normal Mode:
+    This is the default mode. It sets the ld2420 in energy reporting mode and is availble with firmware v1.5.4 or greater.
+    When in this mode the module logs all gate energy levels continuouly in a local array making it available 
+    for reporting and calibration functions.
+  Calibration Mode:
+    When selected the module will collect the average and peak energy levels, reporting them at a preset interval of 5sec.
+    The report is provided in the log console and for information only. In order to calibrate the gate configurations no 
+    objects should be present in the target environment. The recording will establish the mmWave noise floor levels and  
+    undesirable reflections or signal distortions peaks. This should be collected for at least 30 seconds. Longer runs can 
+    catch more potential false signals when devices near the module are used such as Microwave ovens and other signal 
+    emiting sources.
+    When the "Apply Config" button is triggered in calibration mode the ld2420 will be configured with calculated values 
+    based on its collected noise floor data and the module will be returned to Normal Mode. Selecting any other mode drops
+    the sessions collected noise data and no changes will occur. Once the "Apply Config" action is performed it will persist 
+    and cannot be reverted. The gate values would need to be manually adjusted o calibrated again or you can do trigger a 
+    factory reset.
+  Simple Mode:
+    Provides backward compatibility with firmware v1.5.3 and older and will be automatically set whne the firmware is less
+    than v1.5.4.
+
+Example of calibration reporting information:
+
+```
+[14:31:35][I][ld2420:258]: Gate:  0 Avg:  8656 Peak: 18020
+[14:31:35][I][ld2420:258]: Gate:  1 Avg:  2304 Peak: 13968
+[14:31:35][I][ld2420:258]: Gate:  2 Avg:    39 Peak:  3620
+[14:31:35][I][ld2420:258]: Gate:  3 Avg:    18 Peak:    53
+[14:31:35][I][ld2420:258]: Gate:  4 Avg:    16 Peak:    74
+[14:31:35][I][ld2420:258]: Gate:  5 Avg:    15 Peak:    45
+[14:31:35][I][ld2420:258]: Gate:  6 Avg:    17 Peak:    45
+[14:31:35][I][ld2420:258]: Gate:  7 Avg:    75 Peak:   244
+[14:31:35][I][ld2420:258]: Gate:  8 Avg:    65 Peak:   233
+[14:31:35][I][ld2420:258]: Gate:  9 Avg:    13 Peak:    53
+[14:31:35][I][ld2420:258]: Gate: 10 Avg:    12 Peak:    29
+[14:31:35][I][ld2420:258]: Gate: 11 Avg:    12 Peak:    34
+[14:31:35][I][ld2420:258]: Gate: 12 Avg:    13 Peak:    58
+[14:31:35][I][ld2420:258]: Gate: 13 Avg:    13 Peak:    29
+[14:31:35][I][ld2420:258]: Gate: 14 Avg:    24 Peak:    73
+[14:31:35][I][ld2420:258]: Gate: 15 Avg:    36 Peak:    90
+[14:31:35][I][ld2420:260]: Total samples: 251
+```
 
 ```
 external_components:
-  # pull from Github @gelidusresearch current branch 
-  - source: github://GelidusResearch/grps@current
+  - source: github://gelidusresearch/esphome@component.ld2420.refactor
     components: [ ld2420 ]
     refresh: 0s
 
+
 esphome:
-  name: presence-1
-  friendly_name: presence-1
+  name: presence-2
+  friendly_name: presence-2
 
 esp32:
   board: esp32dev
@@ -43,23 +83,25 @@ esp32:
 
 # Enable logging
 logger:
+  level: DEBUG
+  
 
 # Enable Home Assistant API
 api:
   encryption:
-    key: "<your.api.key>"
+    key: "<your key>"
 
 ota:
-  password: "<your.ota.password>"
+  password: "<your password>"
 
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
- ap:
-    ssid: presense-1
-    password: !secret captive_password
+  ap:
+    ssid: "presence-2"
+    password: ""
 
 captive_portal:
 
@@ -67,50 +109,15 @@ web_server:
   port: 80
 
 uart:
-  id: ubus
+  id: ld2420_uart
   tx_pin: GPIO17
   rx_pin: GPIO16
   baud_rate: 115200
   parity: NONE
   stop_bits: 1
 
-# The LD2420 has 16 sense gates 0-15, 0.75m of resolution, max distance is spec'd at 8m
+# The LD2420 has 16 sense gates 0-15 and each gate detects 0.7 meters 15th gate = 9m
 ld2420:
-  presence_time_window: 120s
-  detection_gate_min : 1
-  detection_gate_max: 12
-  g0_move_threshold: 60000
-  g0_still_threshold: 40000
-  g1_move_threshold: 40000
-  g1_still_threshold: 20000
-  g2_move_threshold: 8000
-  g2_still_threshold: 1000
-  g3_move_threshold: 800
-  g3_still_threshold: 400
-  g4_move_threshold: 800
-  g4_still_threshold: 400
-  g5_move_threshold: 500
-  g5_still_threshold: 300
-  g6_move_threshold: 500
-  g6_still_threshold: 300
-  g7_move_threshold: 500
-  g7_still_threshold: 300
-  g8_move_threshold: 400
-  g8_still_threshold: 200
-  g9_move_threshold: 400
-  g9_still_threshold: 200
-  g10_move_threshold: 400
-  g10_still_threshold: 200
-  g11_move_threshold: 400
-  g11_still_threshold: 200
-  g12_move_threshold: 300
-  g12_still_threshold: 100
-  g13_move_threshold: 300
-  g13_still_threshold: 100
-  g14_move_threshold: 200
-  g14_still_threshold: 100
-  g15_move_threshold: 200
-  g15_still_threshold: 100
 
 sensor:
   - platform: ld2420
@@ -125,6 +132,27 @@ binary_sensor:
 switch:
   - platform: restart
     name: Restart
+
+select:
+  - platform: ld2420
+    operating_mode:
+      name: Operating Mode
+      
+number:
+  - platform: ld2420
+    timeout:
+      name: Detection Presence Timeout
+    min_gate_distance:
+      name: Detection Gate Minimum
+    max_gate_distance:
+      name: Detection Gate Maximum
+    gate_select:
+      name: Select Gate to Set
+    still_threshold:
+      name: Set Still Threshold Value
+    move_threshold:
+      name: Set Move Threshold Value
+
 status_led:
   pin: GPIO23
 ```
