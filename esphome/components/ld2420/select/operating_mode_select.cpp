@@ -9,7 +9,7 @@ static const char *const TAG = "LD2420.select";
 
 void LD2420Select::control(const std::string &value) {
   this->publish_state(value);
-  this->parent_->set_operating_mode(state);
+  this->parent_->set_operating_mode(value);
 }
 
 }  // namespace ld2420

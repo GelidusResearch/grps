@@ -33,7 +33,7 @@ CONFIG_SCHEMA = {
     cv.Optional(CONF_REVERT_BUTTON): button.button_schema(
         LD2420RevertConfigButton,
         device_class=DEVICE_CLASS_RESTART,
-        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+        entity_category=ENTITY_CATEGORY_CONFIG,
         icon=ICON_RESTART,
     ),
     cv.Optional(CONF_RESTART_BUTTON): button.button_schema(
@@ -43,7 +43,7 @@ CONFIG_SCHEMA = {
     ),
     cv.Optional(CONF_RESET_BUTTON): button.button_schema(
         LD2420FactoryResetButton,
-        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+        entity_category=ENTITY_CATEGORY_CONFIG,
         icon=ICON_DATABASE,
     ),
 }

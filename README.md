@@ -19,7 +19,7 @@ Also the tx_pin was moved from ot2 to ot1 with firmware v1.5.3
 Firmware v1.5.4 now features the ability to observe gate energy signal levels and with this release we can dynamically 
 calibrate gate still and move thresholds. We have now refactored the previous external component with this capability.
 We have added dynamic configuration functionallity with a compact UI format.
-select, number and button components provide configuration value inputs and control.
+Select, number and button components provide configuration value inputs and control.
 
 Select:
   Select will set the operational mode of the ld2420 component. Four modes are availble.
@@ -67,7 +67,7 @@ Example of calibration reporting information:
 
 ```
 external_components:
-  - source: github://gelidusresearch/esphome@component.ld2420.refactor
+  - source: github://gelidusresearch/grps@current
     components: [ ld2420 ]
     refresh: 0s
 

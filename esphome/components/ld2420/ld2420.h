@@ -57,7 +57,7 @@ static const uint8_t LD2420_ERROR_NONE = 0x00;
 static const uint8_t LD2420_ERROR_TIMEOUT = 0x02;
 static const uint8_t LD2420_ERROR_UNKNOWN = 0x01;
 static const uint8_t LD2420_TOTAL_GATES = 16;
-static const uint8_t CALIBRATE_SAMPLES = 128;
+static const uint8_t CALIBRATE_SAMPLES = 64;
 
 // Register address values
 static const uint16_t CMD_MIN_GATE_REG = 0x0000;
@@ -67,16 +67,15 @@ static const uint16_t CMD_GATE_MOVE_THRESH[LD2420_TOTAL_GATES] = {0x0010, 0x0011
                                                                   0x0016, 0x0017, 0x0018, 0x0019, 0x001A, 0x001B,
                                                                   0x001C, 0x001D, 0x001E, 0x001F};
 static const uint16_t CMD_GATE_STILL_THRESH[LD2420_TOTAL_GATES] = {0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025,
-                                                                 0x0026, 0x0027, 0x0028, 0x0029, 0x002A, 0x002B,
-                                                                 0x002C, 0x002D, 0x002E, 0x002F};
-static const uint32_t FACTORY_MOVE_THRESH[LD2420_TOTAL_GATES] = {60000, 30000, 400, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250};
-static const uint32_t FACTORY_STILL_THRESH[LD2420_TOTAL_GATES] = {40000, 20000, 200, 200, 200, 200, 000, 150, 150, 100, 100, 100, 100, 100, 100, 100};
+                                                                   0x0026, 0x0027, 0x0028, 0x0029, 0x002A, 0x002B,
+                                                                   0x002C, 0x002D, 0x002E, 0x002F};
+static const uint32_t FACTORY_MOVE_THRESH[LD2420_TOTAL_GATES] = {60000, 30000, 400, 250, 250, 250, 250, 250,
+                                                                 250,   250,   250, 250, 250, 250, 250, 250};
+static const uint32_t FACTORY_STILL_THRESH[LD2420_TOTAL_GATES] = {40000, 20000, 200, 200, 200, 200, 000, 150,
+                                                                  150,   100,   100, 100, 100, 100, 100, 100};
 static const uint16_t FACTORY_TIMEOUT = 120;
 static const uint16_t FACTORY_MIN_GATE = 1;
 static const uint16_t FACTORY_MAX_GATE = 12;
-
-
-
 
 // COMMAND_BYTE Header & Footer
 static const uint8_t CMD_FRAME_COMMAND = 6;
@@ -91,9 +90,10 @@ static const uint8_t CMD_FRAME_STATUS = 7;
 static const uint8_t CMD_ERROR_WORD = 8;
 static const uint8_t ENERGY_SENSOR_START = 9;
 static const uint8_t CALIBRATE_REPORT_INTERVAL = 5;
-static const uint8_t MONITOR_REPORT_INTERVAL = 3;
 static const float CALIBRATE_MOVE_FACTOR = 1.5;
-static const float CALIBRATE_STILL_FACTOR = 1.1;
+static const float CALIBRATE_STILL_FACTOR = 1.05;
+static const uint16_t CALIBRATE_MOVE_BASE = 200;
+static const uint16_t CALIBRATE_STILL_BASE = 100;
 static const int CALIBRATE_VERSION_MIN = 154;
 static const std::string OP_NORMAL_MODE_STRING = "Normal";
 static const std::string OP_SIMPLE_MODE_STRING = "Simple";
@@ -105,12 +105,10 @@ static constexpr const char *ERR_MESSAGE[] = {"None", "Unknown", "Timeout"};
 
 class LD2420Listener {
  public:
- 
   virtual void on_presence(bool presence){};
   virtual void on_distance(uint16_t distance){};
   virtual void on_energy(uint16_t *sensor_energy, size_t size){};
   virtual void on_fw_version(std::string &fw){};
-
 };
 
 class LD2420Component : public Component, public uart::UARTDevice {
@@ -168,7 +166,7 @@ class LD2420Component : public Component, public uart::UARTDevice {
   void set_operating_mode(const std::string &state);
   void auto_calibrate_sensitivity();
   void update_radar_data(uint16_t const *gate_energy, uint8_t sample_number);
-  uint8_t calc_checksum(void* data, size_t size);
+  uint8_t calc_checksum(void *data, size_t size);
 
   RegConfigT current_config_;
   RegConfigT new_config_;
@@ -237,6 +235,8 @@ class LD2420Component : public Component, public uart::UARTDevice {
   void handle_energy_mode_(uint8_t *buffer, int len);
   void handle_ack_data_(uint8_t *buffer, int len);
   void readline_(int rx_data, uint8_t *buffer, int len);
+  void set_calibration(bool state) { this->calibration_ = state; };
+  bool get_calibration() { return this->calibration_; };
 
   uint16_t gate_energy_[LD2420_TOTAL_GATES];
 
@@ -249,6 +249,7 @@ class LD2420Component : public Component, public uart::UARTDevice {
   bool cmd_active_{false};
   char ld2420_firmware_ver_[8];
   bool presence_{false};
+  bool calibration_{false};
   uint16_t distance_{0};
   uint8_t config_checksum_{0};
   std::vector<LD2420Listener *> listeners_{};
