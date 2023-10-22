@@ -2,12 +2,9 @@ Gelidus Research PS1 Presence Sensor ESPHome component
 =====================================================
 
 The Gelidus Research PS1 mains powered human presence sensor integrates the new HLK-LD2420 24GHz mmWave radar module.
+I addition to hosting the LD2420 the board will support the LD2410C by soldering JP1 at the 5v supply position. 
 
-![GRPS1 Mains powered IoT device](./grps1.v1.2.front.JPG)
-
-Operation
-=========
-TODO
+![GRPS1 Mains powered IoT device](./grps1.v2.1.JPG)
 
 
 ESPHome Configuration
