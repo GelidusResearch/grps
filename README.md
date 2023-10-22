@@ -154,5 +154,13 @@ status_led:
   pin: GPIO23
 ```
 
+```
+LD2410C Pinouts.
+
+Binary output pin: GPIO16
+           Tx pin: GPIO17
+           Rx pin: GPIO4
+```
+
 
 
