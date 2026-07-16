@@ -1,0 +1,75 @@
+substitutions:
+  device_name: grps
+  device_comment: Presence Sensor
+  disp_name: GRPS1
+  device_type: ESP32-D0WD-V3 Dual Core 240Mhz
+  white_led1_pin: GPIO25
+  white_led2_pin: GPIO26
+  sensor_tx_pin: GPIO17
+  sensor_rx_pin: GPIO16
+  status_led_pin: GPIO23
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${disp_name}
+  name_add_mac_suffix: true
+  project:
+    name: "Gelidus Research.Presence Sensor"
+    version: "1.0"
+
+packages:
+  remote_package_files:
+    url: https://github.com/gelidusresearch/grps/
+    files:
+      - path: packages/grps-ld2420.yaml
+    #  - path: packages/grps-ld2410.yaml
+    #  - path: packages/grps-ld2450.yaml
+    #  - path: packages/grps-nl.yaml
+    ref: main
+    refresh: 1d
+
+dashboard_import:
+  package_import_url: github://gelidusresearch/grps/grps-base.yaml@main
+  import_full_config: true
+
+logger:
+  level: DEBUG
+
+# Enable Home Assistant API
+api:
+
+ota:
+  - platform: esphome
+  - platform: web_server
+
+wifi:
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ap_timeout: 20s
+
+captive_portal:
+
+improv_serial:
+
+safe_mode:
+
+web_server:
+  port: 80
+  version: 3
+#  username: !secret web_user      # enable for minimal security
+#  password: !secret web_password  # needs secrets file entries created first
+
+sensor:
+  - platform: wifi_signal # Reports the WiFi signal strength/RSSI in dB
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+  - platform: copy # Reports the WiFi signal strength in %
+    source_id: wifi_signal_db
+    name: "WiFi Signal Strength"
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "%"
+    entity_category: "diagnostic"
+    device_class: ""
