@@ -1,0 +1,243 @@
+substitutions:
+  device_comment: GRPS1 Presence Sensor w/Night Light
+  device_type: ESP32-D0WD-V3 Dual Core 240Mhz
+  device_name: grps
+  disp_name: GRPS1
+  white_led1_pin: GPIO25
+  sensor_tx_pin: GPIO17
+  sensor_rx_pin: GPIO16
+  status_led_pin: GPIO23
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${disp_name}
+  name_add_mac_suffix: false
+  project:
+    name: "Gelidus Research.Presence Sensor"
+    version: "1.0"
+
+dashboard_import:
+  package_import_url: github://gelidusresearch/grps/grps.yaml@main
+  import_full_config: true
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  reboot_timeout: 1h
+
+ota:
+  - platform: esphome
+  #  password: ""
+  - platform: web_server
+
+wifi:
+
+  ap:
+
+web_server:
+  version: 3.0
+
+improv_serial:
+
+captive_portal:
+
+uart:
+  id: ld2420_uart
+  tx_pin: ${sensor_tx_pin}
+  rx_pin: ${sensor_rx_pin}
+  baud_rate: 115200
+  parity: NONE
+  stop_bits: 1
+#  debug:
+#    direction: BOTH
+
+# The LD2420 has 16 sense gates 0-15 and each gate detects 0.7 meters 15th gate = 9m
+ld2420:
+
+output:
+  - platform: ledc
+    id: pwm_output1
+    pin: ${white_led1_pin}
+    frequency: 500 Hz  # You can adjust the frequency if needed
+    inverted: false     # Set to true if you want inverted PWM signal
+
+light:
+  - platform: monochromatic
+    name: "PWM Light"
+    output: pwm_output1
+    restore_mode: ALWAYS_OFF
+
+text_sensor:
+  - platform: ld2420
+    fw_version:
+      name: LD2420 Firmware
+
+sensor:
+  - platform: ld2420
+    moving_distance:
+      name : Moving Distance
+  - platform: wifi_signal # Reports the WiFi signal strength/RSSI in dB
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+  - platform: copy # Reports the WiFi signal strength in %
+    source_id: wifi_signal_db
+    name: "WiFi Signal Strength"
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "%"
+    entity_category: "diagnostic"
+    device_class: ""
+
+binary_sensor:
+  - platform: ld2420
+    has_target:
+      name: Presence
+  - platform: gpio
+    pin: GPIO4
+    name: GPIO Presence
+    id: gpio_presence_sensor
+
+  - platform: template
+    name: presence_state
+    lambda: |-
+      if (id(enable_presence_sensor).state && id(gpio_presence_sensor).state) {
+        return true;
+      } else {
+        return false;
+      }
+
+switch:
+  - platform: restart
+    name: Restart ESPHome Node
+  - platform: template
+    name: "Enable Presence Sensor"
+    id: enable_presence_sensor
+    restore_mode: RESTORE_DEFAULT_ON
+    optimistic: True
+
+select:
+  - platform: ld2420
+    operating_mode:
+      name: Operating Mode
+
+number:
+  - platform: ld2420
+    presence_timeout:
+      name: Detection Presence Timeout
+    min_gate_distance:
+      name: Detection Gate Minimum
+    max_gate_distance:
+      name: Detection Gate Maximum
+    gate_select:
+      name: Select Gate to Set
+    still_threshold:
+      name: Set Still Threshold Value
+    move_threshold:
+      name: Set Move Threshold Value
+    gate_move_sensitivity:
+      name: Calibration Move Sensitivity Factor
+    gate_still_sensitivity:
+      name: Calibration Still Sensitivity Factor
+
+    gate_0:
+      move_threshold:
+        name: Gate 0 Move Threshold
+      still_threshold:
+        name: Gate 0 Still Threshold
+    gate_1:
+      move_threshold:
+        name: Gate 1 Move Threshold
+      still_threshold:
+        name: Gate 1 Still Threshold
+    gate_2:
+      move_threshold:
+        name: Gate 2 Move Threshold
+      still_threshold:
+        name: Gate 2 Still Threshold
+    gate_3:
+      move_threshold:
+        name: Gate 3 Move Threshold
+      still_threshold:
+        name: Gate 3 Still Threshold
+    gate_4:
+      move_threshold:
+        name: Gate 4 Move Threshold
+      still_threshold:
+        name: Gate 4 Still Threshold
+    gate_5:
+      move_threshold:
+        name: Gate 5 Move Threshold
+      still_threshold:
+        name: Gate 5 Still Threshold
+    gate_6:
+      move_threshold:
+        name: Gate 6 Move Threshold
+      still_threshold:
+        name: Gate 6 Still Threshold
+    gate_7:
+      move_threshold:
+        name: Gate 7 Move Threshold
+      still_threshold:
+        name: Gate 7 Still Threshold
+    gate_8:
+      move_threshold:
+        name: Gate 8 Move Threshold
+      still_threshold:
+        name: Gate 8 Still Threshold
+    gate_9:
+      move_threshold:
+        name: Gate 9 Move Threshold
+      still_threshold:
+        name: Gate 9 Still Threshold
+    gate_10:
+      move_threshold:
+        name: Gate 10 Move Threshold
+      still_threshold:
+        name: Gate 10 Still Threshold
+    gate_11:
+      move_threshold:
+        name: Gate 11 Move Threshold
+      still_threshold:
+        name: Gate 11 Still Threshold
+    gate_12:
+      move_threshold:
+        name: Gate 12 Move Threshold
+      still_threshold:
+        name: Gate 12 Still Threshold
+    gate_13:
+      move_threshold:
+        name: Gate 13 Move Threshold
+      still_threshold:
+        name: Gate 13 Still Threshold
+    gate_14:
+      move_threshold:
+        name: Gate 14 Move Threshold
+      still_threshold:
+        name: Gate 14 Still Threshold
+    gate_15:
+      move_threshold:
+        name: Gate 15 Move Threshold
+      still_threshold:
+        name: Gate 15 Still Threshold
+
+button:
+  - platform: ld2420
+    apply_config:
+      name: Apply Config
+    factory_reset:
+      name: Factory Reset
+    restart_module:
+      name: Restart Module
+    revert_config:
+      name: Abort Edits
+
+status_led:
+  pin: GPIO23

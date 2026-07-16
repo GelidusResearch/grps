@@ -1,0 +1,188 @@
+# HLK-LD2410 / LD2410B / LD2410C 24GHz mmWave Radar Presence Sensor Package
+# 9 detection gates (0-8), 0.75m per gate (~6m max range)
+# Default baud rate: 256000 — use hardware UART pins for reliable communication
+
+uart:
+  id: ld2410_uart
+  tx_pin: ${sensor_tx_pin}
+  rx_pin: ${sensor_rx_pin}
+  baud_rate: 256000
+  parity: NONE
+  stop_bits: 1
+
+ld2410:
+  id: ld2410_radar
+  uart_id: ld2410_uart
+
+status_led:
+  pin: ${status_led_pin}
+
+text_sensor:
+  - platform: ld2410
+    ld2410_id: ld2410_radar
+    version:
+      name: LD2410 Firmware Version
+    mac_address:
+      name: LD2410 BT MAC Address
+
+sensor:
+  - platform: ld2410
+    ld2410_id: ld2410_radar
+    light:
+      name: Light
+    moving_distance:
+      name: Moving Distance
+    still_distance:
+      name: Still Distance
+    moving_energy:
+      name: Move Energy
+    still_energy:
+      name: Still Energy
+    detection_distance:
+      name: Detection Distance
+    g0:
+      move_energy:
+        name: G0 Move Energy
+      still_energy:
+        name: G0 Still Energy
+    g1:
+      move_energy:
+        name: G1 Move Energy
+      still_energy:
+        name: G1 Still Energy
+    g2:
+      move_energy:
+        name: G2 Move Energy
+      still_energy:
+        name: G2 Still Energy
+    g3:
+      move_energy:
+        name: G3 Move Energy
+      still_energy:
+        name: G3 Still Energy
+    g4:
+      move_energy:
+        name: G4 Move Energy
+      still_energy:
+        name: G4 Still Energy
+    g5:
+      move_energy:
+        name: G5 Move Energy
+      still_energy:
+        name: G5 Still Energy
+    g6:
+      move_energy:
+        name: G6 Move Energy
+      still_energy:
+        name: G6 Still Energy
+    g7:
+      move_energy:
+        name: G7 Move Energy
+      still_energy:
+        name: G7 Still Energy
+    g8:
+      move_energy:
+        name: G8 Move Energy
+      still_energy:
+        name: G8 Still Energy
+
+binary_sensor:
+  - platform: ld2410
+    ld2410_id: ld2410_radar
+    has_target:
+      name: Presence
+    has_moving_target:
+      name: Moving Target
+    has_still_target:
+      name: Still Target
+    out_pin_presence_status:
+      name: Out Pin Presence Status
+
+switch:
+  - platform: restart
+    name: Restart
+  - platform: ld2410
+    ld2410_id: ld2410_radar
+    engineering_mode:
+      name: Engineering Mode
+    bluetooth:
+      name: Control Bluetooth
+
+select:
+  - platform: ld2410
+    ld2410_id: ld2410_radar
+    distance_resolution:
+      name: Distance Resolution
+    baud_rate:
+      name: Baud Rate
+    light_function:
+      name: Light Function
+    out_pin_level:
+      name: Out Pin Level
+
+number:
+  - platform: ld2410
+    ld2410_id: ld2410_radar
+    timeout:
+      name: Timeout
+    light_threshold:
+      name: Light Threshold
+    max_move_distance_gate:
+      name: Max Move Distance Gate
+    max_still_distance_gate:
+      name: Max Still Distance Gate
+    g0:
+      move_threshold:
+        name: G0 Move Threshold
+      still_threshold:
+        name: G0 Still Threshold
+    g1:
+      move_threshold:
+        name: G1 Move Threshold
+      still_threshold:
+        name: G1 Still Threshold
+    g2:
+      move_threshold:
+        name: G2 Move Threshold
+      still_threshold:
+        name: G2 Still Threshold
+    g3:
+      move_threshold:
+        name: G3 Move Threshold
+      still_threshold:
+        name: G3 Still Threshold
+    g4:
+      move_threshold:
+        name: G4 Move Threshold
+      still_threshold:
+        name: G4 Still Threshold
+    g5:
+      move_threshold:
+        name: G5 Move Threshold
+      still_threshold:
+        name: G5 Still Threshold
+    g6:
+      move_threshold:
+        name: G6 Move Threshold
+      still_threshold:
+        name: G6 Still Threshold
+    g7:
+      move_threshold:
+        name: G7 Move Threshold
+      still_threshold:
+        name: G7 Still Threshold
+    g8:
+      move_threshold:
+        name: G8 Move Threshold
+      still_threshold:
+        name: G8 Still Threshold
+
+button:
+  - platform: ld2410
+    ld2410_id: ld2410_radar
+    factory_reset:
+      name: Factory Reset
+    restart:
+      name: Restart Module
+    query_params:
+      name: Query Params
