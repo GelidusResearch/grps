@@ -1,0 +1,19 @@
+# Ambient Light Sensor Configuration for TEMT6000
+sensor:
+  - platform: adc
+    pin: GPIO32
+    attenuation: 12dB
+    samples: 10
+    name: "Room Brightness"
+    id: adc1
+    device_class: illuminance
+    unit_of_measurement: lx
+    filters:
+      - lambda: |-
+          return (x / 10000.0) * 2000000.0;
+      - calibrate_linear:
+          - 28.5 -> 0.0  #exclude noise floor
+          - 1000 -> 200
+      - clamp:
+          min_value: 0
+    update_interval: 1s
