@@ -13,7 +13,7 @@ sensor:
           return (x / 10000.0) * 2000000.0;
       - calibrate_linear:
           - 28.5 -> 0.0  #exclude noise floor
-          - 1000 -> 200
+          - 660 -> 200
       - clamp:
           min_value: 0
     update_interval: 1s
