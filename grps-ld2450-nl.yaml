@@ -8,6 +8,8 @@ substitutions:
   sensor_rx_pin: GPIO17
   ambient_sensor_pin: GPIO32
   status_led_pin: GPIO23
+  i2c_sda_pin: GPIO18         #v2.4 = GPIO18
+  i2c_scl_pin: GPIO19         #v2.4 = GPIO19
 
 esphome:
   name: ${device_name}
@@ -26,6 +28,7 @@ packages:
       - path: packages/grps-ld2450.yaml
       - path: packages/grps-ambient1.yaml
       - path: packages/grps-nl.yaml
+    #  - path: packages/grps-grtaq1.yaml
     ref: main
     refresh: 0s
 
