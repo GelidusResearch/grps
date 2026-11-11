@@ -24,6 +24,9 @@ packages:
     #  - path: packages/grps-ld2410.yaml
     #  - path: packages/grps-ld2450.yaml
       - path: packages/grps-nl.yaml
+    #  - path: packages/grps-ambient1.yaml # rev 2.4
+    #  - path: packages/grps-grtaq1.yaml # rev 2.4
+    #  - path: packages/grps-grth1.yaml # rev 2.4
     ref: main
     refresh: 1d
 

@@ -13,10 +13,12 @@ sensor:
       id: id_temperature_sensor
       name: "AHT20 Temperature"
       device_class: "temperature"
+      icon: "mdi:thermometer"
     humidity:
       id: id_humidity_sensor
       name: "AHT20 Humidity"
       device_class: "humidity"
+      icon: "mdi:water-percent"
     update_interval: 60s
   - platform: ens160_i2c
     address: 0x53

@@ -1,0 +1,30 @@
+i2c:
+  sda: ${i2c_sda_pin}
+  scl: ${i2c_scl_pin}
+  id: bus_a
+  frequency: 100kHz
+  scan: True
+
+sensor:
+  - platform: aht10
+    address: 0x38
+    variant: AHT20
+    temperature:
+      id: id_temperature_sensor
+      name: "AHT20 Temperature"
+    humidity:
+      id: id_humidity_sensor
+      name: "AHT20 Humidity"
+    update_interval: 60s
+  - platform: ens160_i2c
+    address: 0x53
+    eco2:
+      name: "ENS160 eCO2"
+    tvoc:
+      name: "ENS160 TVOC"
+    aqi:
+      name: "ENS160 AQI"
+    compensation:
+      temperature: id_temperature_sensor
+      humidity: id_humidity_sensor
+    update_interval: 90s
